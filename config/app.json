@@ -1,0 +1,22 @@
+{
+    "name": "assignment",
+    "port": 4000,
+    "debug": false,
+    "default-endPoint": "v0",
+    "databases": {
+        "default": {
+            "database": "sample",
+            "collections": {
+                "collection1": "col1",
+                "collection2": "col2"
+            }
+        },
+        "v0": {
+            "database": "sample1",
+            "collections": {
+                "collection1": "col1",
+                "collection2": "col2"
+            }
+        }
+    }
+}

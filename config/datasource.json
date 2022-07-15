@@ -1,0 +1,5 @@
+{
+    "mongo": {
+        "url": "username:password:url"
+    }
+}
