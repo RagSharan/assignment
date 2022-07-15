@@ -38,7 +38,14 @@ func (*service) AddAnswer(answer model.Answer) (*mongo.InsertOneResult, error) {
 }
 
 func (*service) UpdateAnswer(answer model.Answer) (*mongo.UpdateResult, error) {
-	result, err := queryIns.UpdateById(collection, answer)
+	var doc primitive.M
+	id, _ := primitive.ObjectIDFromHex(answer.Id.String())
+	doc = primitive.M{
+		"_id":   answer.Id,
+		"key":   answer.Key,
+		"value": answer.Value,
+	}
+	result, err := queryIns.UpdateById(collection, id, doc)
 
 	return result, err
 }

@@ -18,7 +18,7 @@ type query struct{}
 type Iquery interface {
 	FindOne(collName string, doc map[string]interface{}) ([]bson.M, error)
 	Create(collName string, doc interface{}) (*mongo.InsertOneResult, error)
-	UpdateById(collName string, doc interface{}) (*mongo.UpdateResult, error)
+	UpdateById(collName string, id primitive.ObjectID, doc interface{}) (*mongo.UpdateResult, error)
 	DeleteDocument(collName string, doc interface{}) (*mongo.DeleteResult, error)
 }
 
@@ -56,15 +56,13 @@ func (*query) FindOne(collName string, params map[string]interface{}) ([]bson.M,
 	return result, err
 }
 
-func (*query) UpdateById(collName string, doc interface{}) (*mongo.UpdateResult, error) {
+func (*query) UpdateById(collName string, id primitive.ObjectID, doc interface{}) (*mongo.UpdateResult, error) {
 	database, client := connectDB()
 	defer closeConnection(client)
 	collection := database.Collection(collName)
-	kmap, err := trimObject(doc)
-	if err != nil {
-		log.Println(err)
-	}
-	filter, update := formateUpdate(kmap)
+
+	filter := bson.M{"_id": id}
+	update := bson.M{"$set": doc}
 	result, err := collection.UpdateByID(context.TODO(), filter, update)
 	if err != nil {
 		log.Println(err)
