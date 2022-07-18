@@ -21,27 +21,24 @@ const collection string = "answers"
 type service struct{}
 
 type IService interface {
-	GetAnswerList(params map[string]interface{}) (answers []primitive.M, err error)
+	GetAnswerById(id string) (model.Answer, error)
 	GetAnswer(filter map[string]interface{}) ([]model.Answer, error)
 	AddAnswer(answer model.Answer) (*mongo.InsertOneResult, error)
 	UpdateAnswer(answer model.Answer) (*mongo.UpdateResult, error)
-	RemoveAnswer(filter map[string]interface{}) (*mongo.DeleteResult, error)
+	RemoveAnswer(id string) (*mongo.DeleteResult, error)
 }
 
 func NewService() IService {
 	return &service{}
 }
-
-func (*service) GetAnswerList(params map[string]interface{}) (result []primitive.M, err error) {
-
-	result, err = queryIns.FindList(collection, params)
-	if err != nil {
-		return
+func (*service) GetAnswerById(param string) (model.Answer, error) {
+	id, _ := primitive.ObjectIDFromHex(param)
+	filter := primitive.M{
+		"_id": id,
 	}
-
-	return result, err
+	answers, err := queryIns.FindAll(collection, filter)
+	return answers[0], err
 }
-
 func (*service) GetAnswer(params map[string]interface{}) ([]model.Answer, error) {
 	var answers []model.Answer
 	filter := genFilter(params)
@@ -52,7 +49,6 @@ func (*service) GetAnswer(params map[string]interface{}) ([]model.Answer, error)
 func (*service) AddAnswer(answer model.Answer) (*mongo.InsertOneResult, error) {
 	result, err := queryIns.Create(collection, answer)
 	if err == nil {
-		//str := result.InsertedID.(string)
 		answer.Id = result.InsertedID.(primitive.ObjectID)
 		_, err = recordEvent("create", answer)
 	}
@@ -68,16 +64,17 @@ func (*service) UpdateAnswer(answer model.Answer) (*mongo.UpdateResult, error) {
 	return result, err
 }
 
-func (*service) RemoveAnswer(params map[string]interface{}) (*mongo.DeleteResult, error) {
-	filter := genFilter(params)
+func (*service) RemoveAnswer(param string) (*mongo.DeleteResult, error) {
+	id, _ := primitive.ObjectIDFromHex(param)
+	filter := primitive.M{
+		"_id": id,
+	}
 	result, err := queryIns.DeleteDocument(collection, filter)
 	if err == nil && result.DeletedCount != 0 {
-		var answer model.Answer
-		for k, v := range params {
-			answer = model.Answer{
-				Key:   k,
-				Value: v,
-			}
+		answer := model.Answer{
+			Id:    id,
+			Key:   "",
+			Value: nil,
 		}
 		_, err = recordEvent("delete", answer)
 	}

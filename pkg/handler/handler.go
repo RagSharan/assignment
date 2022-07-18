@@ -2,8 +2,10 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/ragsharan/assignment/pkg/model"
 	"github.com/ragsharan/assignment/pkg/service/v0/answers"
@@ -16,13 +18,14 @@ var (
 func GetAnswer(res http.ResponseWriter, req *http.Request) {
 	filter := make(map[string]interface{})
 	res.Header().Set("Content-Type", "application/json")
-	data := req.URL.Query()
-	for k, v := range data {
+	queryParams := req.URL.Query()
+	fmt.Println("query params", queryParams)
+	for k, v := range queryParams {
 		if len(v) == 1 {
 			filter[k] = v[0]
 		}
 	}
-
+	fmt.Println("filter", filter)
 	result, err := serviceIns.GetAnswer(filter)
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
@@ -31,6 +34,21 @@ func GetAnswer(res http.ResponseWriter, req *http.Request) {
 	}
 	res.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(res).Encode(result)
+}
+
+func GetAnswerById(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+	urlPath := strings.Split(req.URL.Path, "/")
+	id := strings.TrimSpace(urlPath[4])
+	result, err := serviceIns.GetAnswerById(id)
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(res).Encode(err)
+		return
+	}
+	res.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(res).Encode(result)
+
 }
 
 func AddAnswer(res http.ResponseWriter, req *http.Request) {
@@ -71,14 +89,9 @@ func UpdateAnswer(res http.ResponseWriter, req *http.Request) {
 
 func RemoveAnswer(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
-	filter := make(map[string]interface{})
-	data := req.URL.Query()
-	for k, v := range data {
-		if len(v) == 1 {
-			filter[k] = req.URL.Query().Get(k)
-		}
-	}
-	result, err := serviceIns.RemoveAnswer(filter)
+	urlPath := strings.Split(req.URL.Path, "/")
+	id := strings.TrimSpace(urlPath[4])
+	result, err := serviceIns.RemoveAnswer(id)
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(res).Encode(err)
