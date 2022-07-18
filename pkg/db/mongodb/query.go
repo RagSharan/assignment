@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/ragsharan/assignment/pkg/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -16,10 +17,11 @@ import (
 type query struct{}
 
 type Iquery interface {
-	FindOne(collName string, doc map[string]interface{}) ([]bson.M, error)
+	FindList(collName string, kmap map[string]interface{}) ([]bson.M, error)
+	FindAll(collName string, filter primitive.M) ([]model.Answer, error)
 	Create(collName string, doc interface{}) (*mongo.InsertOneResult, error)
 	UpdateById(collName string, id primitive.ObjectID, doc interface{}) (*mongo.UpdateResult, error)
-	DeleteDocument(collName string, doc interface{}) (*mongo.DeleteResult, error)
+	DeleteDocument(collName string, filter primitive.M) (*mongo.DeleteResult, error)
 }
 
 func NewQuery() Iquery {
@@ -37,12 +39,16 @@ func (*query) Create(collName string, doc interface{}) (*mongo.InsertOneResult, 
 	return result, err
 }
 
-func (*query) FindOne(collName string, params map[string]interface{}) ([]bson.M, error) {
+/**
+* This function will provide List of objects in form of cursor which needs to decode
+* If filter is null here it will fetch whole database
+**/
+func (*query) FindList(collName string, kmap map[string]interface{}) ([]bson.M, error) {
 	database, client := connectDB()
 	defer closeConnection(client)
 	collection := database.Collection(collName)
 	findOptions := options.Find()
-	filter := formateFilter(params)
+	filter := formateFilter(kmap)
 	cursor, err := collection.Find(context.TODO(), filter, findOptions)
 	if err != nil {
 		log.Println(err)
@@ -56,6 +62,23 @@ func (*query) FindOne(collName string, params map[string]interface{}) ([]bson.M,
 	return result, err
 }
 
+func (*query) FindAll(collName string, filter primitive.M) ([]model.Answer, error) {
+	ctx := context.Background()
+	database, client := connectDB()
+	defer closeConnection(client)
+	collection := database.Collection(collName)
+
+	cursor, err := collection.Find(ctx, filter)
+	if err != nil {
+		log.Println(err)
+	}
+	var result []model.Answer
+	cursor.All(ctx, &result)
+	defer cursor.Close(ctx)
+
+	return result, err
+}
+
 func (*query) UpdateById(collName string, id primitive.ObjectID, doc interface{}) (*mongo.UpdateResult, error) {
 	database, client := connectDB()
 	defer closeConnection(client)
@@ -63,22 +86,21 @@ func (*query) UpdateById(collName string, id primitive.ObjectID, doc interface{}
 
 	filter := bson.M{"_id": id}
 	update := bson.M{"$set": doc}
-	result, err := collection.UpdateByID(context.TODO(), filter, update)
+	fmt.Println("filter of update", filter)
+	fmt.Println("doc of update", update)
+	result, err := collection.UpdateOne(context.TODO(), filter, update)
+	fmt.Println("result", result)
 	if err != nil {
 		log.Println(err)
 	}
 	return result, err
 }
 
-func (*query) DeleteDocument(collName string, doc interface{}) (*mongo.DeleteResult, error) {
+func (*query) DeleteDocument(collName string, filter primitive.M) (*mongo.DeleteResult, error) {
 	database, client := connectDB()
 	defer closeConnection(client)
 	collection := database.Collection(collName)
-	kmap, err := trimObject(doc)
-	if err != nil {
-		log.Println(err)
-	}
-	filter := formateFilter(kmap)
+
 	deleteResult, err := collection.DeleteMany(context.TODO(), filter)
 	if err != nil {
 		log.Println(err)
@@ -87,16 +109,16 @@ func (*query) DeleteDocument(collName string, doc interface{}) (*mongo.DeleteRes
 	return deleteResult, err
 }
 
-func trimObject(doc interface{}) (map[string]interface{}, error) {
-	var kmap map[string]interface{}
-	data, err := bson.Marshal(doc)
-	if err != nil {
-		log.Println(err)
-	}
-	err = bson.Unmarshal(data, &kmap)
-	log.Println("kmap", kmap)
-	return kmap, err
-}
+// func trimObject(doc interface{}) (map[string]interface{}, error) {
+// 	var kmap map[string]interface{}
+// 	data, err := bson.Marshal(doc)
+// 	if err != nil {
+// 		log.Println(err)
+// 	}
+// 	err = bson.Unmarshal(data, &kmap)
+// 	log.Println("kmap", kmap)
+// 	return kmap, err
+// }
 func formateFilter(kmap map[string]interface{}) primitive.M {
 	var filter primitive.M
 	keyRecursion(&filter, &kmap)
@@ -139,22 +161,22 @@ func closeConnection(client *mongo.Client) {
 	fmt.Println("Connection to MongoDB instance is closed.")
 }
 
-func formateUpdate(kmap map[string]interface{}) (primitive.M, []primitive.M) {
-	var filter primitive.M
-	var update []primitive.M
-	i := 0
-	for key, value := range kmap {
-		if i == 0 {
-			zmap := map[string]interface{}{key: value}
-			filter = formateFilter(zmap)
-			i = 1
-			continue
-		}
-		zmap := map[string]interface{}{key: value}
-		var temp primitive.M
-		keyRecursion(&temp, &zmap)
-		final := bson.M{"$set": temp} //$set could be replaced by other methods
-		update = append(update, final)
-	}
-	return filter, update
-}
+// func formateUpdate(kmap map[string]interface{}) (primitive.M, []primitive.M) {
+// 	var filter primitive.M
+// 	var update []primitive.M
+// 	i := 0
+// 	for key, value := range kmap {
+// 		if i == 0 {
+// 			zmap := map[string]interface{}{key: value}
+// 			filter = formateFilter(zmap)
+// 			i = 1
+// 			continue
+// 		}
+// 		zmap := map[string]interface{}{key: value}
+// 		var temp primitive.M
+// 		keyRecursion(&temp, &zmap)
+// 		final := bson.M{"$set": temp} //$set could be replaced by other methods
+// 		update = append(update, final)
+// 	}
+// 	return filter, update
+// }

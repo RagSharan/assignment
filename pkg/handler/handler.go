@@ -6,11 +6,11 @@ import (
 	"net/http"
 
 	"github.com/ragsharan/assignment/pkg/model"
-	service "github.com/ragsharan/assignment/pkg/service/v0"
+	"github.com/ragsharan/assignment/pkg/service/v0/answers"
 )
 
 var (
-	serviceIns service.IService = service.NewService()
+	serviceIns answers.IService = answers.NewService()
 )
 
 func GetAnswer(res http.ResponseWriter, req *http.Request) {
@@ -75,7 +75,7 @@ func RemoveAnswer(res http.ResponseWriter, req *http.Request) {
 	data := req.URL.Query()
 	for k, v := range data {
 		if len(v) == 1 {
-			filter[k] = v[0]
+			filter[k] = req.URL.Query().Get(k)
 		}
 	}
 	result, err := serviceIns.RemoveAnswer(filter)
