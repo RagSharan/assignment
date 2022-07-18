@@ -22,8 +22,8 @@ Run through build file
                     "value": "answer"
               }
 
-4- Delete API-  http://localhost:8080/api/v1/answer?key=Q5
-                http://localhost:8080/api/v1/answer?id=62d4558f2000fc95e9f11803
+4- Delete API-  
+                http://localhost:8080/api/v1/answer/62d4558f2000fc95e9f11803
 
 # Events API
 
