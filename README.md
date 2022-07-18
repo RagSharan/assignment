@@ -7,7 +7,7 @@ go run cmd/svr/main.go
 Run through build file
 ./main.exe
 
-# APIs URLs
+# Answer APIs
 1- Post API- http://localhost:8080/api/v1/answer
         Body- {
               "Key": "Q1",
@@ -29,7 +29,7 @@ Run through build file
 
 
 
-#DB Mongodb docker container url
+# DB Mongodb docker container url
 url- mongodb://localhost:27017
 
 All the code is inside pkg folder
