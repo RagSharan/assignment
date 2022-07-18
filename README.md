@@ -33,7 +33,11 @@ Run through build file
 
 # Events API
 
+1- GetEvents
+here id = answerId   :- 
+http://localhost:8080/api/v1/events/{id}
 
+http://localhost:8080/api/v1/events/62d593e3e072f3f2b336c88a
 
 # DB Mongodb docker container url
 url- mongodb://localhost:27017
