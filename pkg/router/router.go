@@ -13,6 +13,7 @@ func NewRouter() *mux.Router {
 	router.HandleFunc("/api/v1/answer", handler.AddAnswer).Methods("POST")
 	router.HandleFunc("/api/v1/answer", handler.UpdateAnswer).Methods("PUT")
 	router.HandleFunc("/api/v1/answer/{id}", handler.RemoveAnswer).Methods("DELETE")
+	router.HandleFunc("/api/v1/events/{id}", handler.GetEventsById).Methods("GET")
 
 	return router
 }

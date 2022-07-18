@@ -36,13 +36,22 @@ func (*service) GetAnswerById(param string) (model.Answer, error) {
 	filter := primitive.M{
 		"_id": id,
 	}
-	answers, err := queryIns.FindAll(collection, filter)
-	return answers[0], err
+	result, err := queryIns.FindAll(collection, filter)
+	data := result[0].(primitive.D)
+	answer := convertInStruct(data)
+
+	return answer, err
 }
 func (*service) GetAnswer(params map[string]interface{}) ([]model.Answer, error) {
 	var answers []model.Answer
 	filter := genFilter(params)
-	answers, err := queryIns.FindAll(collection, filter)
+	result, err := queryIns.FindAll(collection, filter)
+	for _, v := range result {
+		data := v.(primitive.D)
+		answer := convertInStruct(data)
+		answers = append(answers, answer)
+	}
+
 	return answers, err
 }
 
@@ -58,7 +67,7 @@ func (*service) AddAnswer(answer model.Answer) (*mongo.InsertOneResult, error) {
 func (*service) UpdateAnswer(answer model.Answer) (*mongo.UpdateResult, error) {
 	id := answer.Id
 	result, err := queryIns.UpdateById(collection, id, answer)
-	if err == nil {
+	if err == nil && result.ModifiedCount != 0 {
 		_, err = recordEvent("update", answer)
 	}
 	return result, err
@@ -69,22 +78,26 @@ func (*service) RemoveAnswer(param string) (*mongo.DeleteResult, error) {
 	filter := primitive.M{
 		"_id": id,
 	}
+	results, _ := queryIns.FindAll(collection, filter)
+	data := results[0].(primitive.D)
+	answer := convertInStruct(data)
+
 	result, err := queryIns.DeleteDocument(collection, filter)
 	if err == nil && result.DeletedCount != 0 {
-		answer := model.Answer{
-			Id:    id,
-			Key:   "",
-			Value: nil,
-		}
 		_, err = recordEvent("delete", answer)
 	}
 	return result, err
 }
 
 func recordEvent(eventName string, answer model.Answer) (*mongo.InsertOneResult, error) {
+	x := model.Data{
+		Key:   answer.Key,
+		Value: answer.Value,
+	}
 	event := model.Event{
+		EventId:   answer.Id,
 		EventName: eventName,
-		Data:      answer,
+		Data:      x,
 	}
 	data, err := eventIns.AddEvents(event)
 	if err != nil {
@@ -109,4 +122,10 @@ func genFilter(params map[string]interface{}) primitive.M {
 		}
 	}
 	return filter
+}
+
+func convertInStruct(data primitive.D) (structObj model.Answer) {
+	byteD, _ := bson.Marshal(data)
+	bson.Unmarshal(byteD, &structObj)
+	return
 }

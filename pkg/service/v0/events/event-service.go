@@ -1,9 +1,6 @@
 package events
 
 import (
-	"errors"
-	"fmt"
-
 	query "github.com/ragsharan/assignment/pkg/db/mongodb"
 	"github.com/ragsharan/assignment/pkg/model"
 	"go.mongodb.org/mongo-driver/bson"
@@ -15,11 +12,12 @@ var (
 	queryIns query.Iquery = query.NewQuery()
 )
 
-const collection string = "events"
+const collection string = "eventsdata"
 
 type eventService struct{}
 
 type IEventService interface {
+	GetEventsById(param string) ([]model.Event, error)
 	GetEvents(filter map[string]interface{}) ([]model.Event, error)
 	AddEvents(event model.Event) (*mongo.InsertOneResult, error)
 	UpdateEvents(event model.Event) (*mongo.UpdateResult, error)
@@ -29,35 +27,30 @@ type IEventService interface {
 func NewService() IEventService {
 	return &eventService{}
 }
-
-func (*eventService) GetEvents(params map[string]interface{}) ([]model.Event, error) {
+func (*eventService) GetEventsById(param string) ([]model.Event, error) {
 	var events []model.Event
-	var filter primitive.M
-	for k, v := range params {
-		if k == "id" {
-			k = "_id"
-			id, e := primitive.ObjectIDFromHex(v.(string))
-			if e != nil {
-				fmt.Println("hexa error", e)
-			}
-			fmt.Println("id of hexa", id)
-			filter = bson.M{
-				k: id,
-			}
-		} else {
-			filter = bson.M{
-				k: v,
-			}
-		}
+	id, _ := primitive.ObjectIDFromHex(param)
+	filter := primitive.M{
+		"eventId": id,
 	}
-	fmt.Println("filter value", filter)
-	// result, err := queryIns.FindAll(collection, filter)
-	// for _, v := range result {
-	// 	event, _ := v.(model.Event)
-	// 	events = append(events, event)
-	// }
-	fmt.Println("events", events)
-	err := errors.New("bad data")
+	result, err := queryIns.FindAll(collection, filter)
+	for _, v := range result {
+		data := v.(primitive.D)
+		event := convertInStruct(data)
+		events = append(events, event)
+	}
+	return events, err
+}
+
+func (*eventService) GetEvents(filter map[string]interface{}) ([]model.Event, error) {
+	var events []model.Event
+	result, err := queryIns.FindAll(collection, filter)
+
+	for _, v := range result {
+		data := v.(primitive.D)
+		event := convertInStruct(data)
+		events = append(events, event)
+	}
 	return events, err
 }
 
@@ -76,4 +69,9 @@ func (*eventService) UpdateEvents(event model.Event) (*mongo.UpdateResult, error
 func (*eventService) RemoveEvents(filter map[string]interface{}) (*mongo.DeleteResult, error) {
 	result, err := queryIns.DeleteDocument(collection, filter)
 	return result, err
+}
+func convertInStruct(data primitive.D) (structObj model.Event) {
+	byteD, _ := bson.Marshal(data)
+	bson.Unmarshal(byteD, &structObj)
+	return
 }

@@ -25,7 +25,6 @@ func GetAnswer(res http.ResponseWriter, req *http.Request) {
 			filter[k] = v[0]
 		}
 	}
-	fmt.Println("filter", filter)
 	result, err := serviceIns.GetAnswer(filter)
 	if err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
